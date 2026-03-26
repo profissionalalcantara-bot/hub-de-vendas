@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hub de Vendas Teison</title>
+  <style>
+    :root{
+      --bg:#020b18;
+      --bg2:#061325;
+      --text:#f3f7ff;
+      --muted:#9bb0d1;
+      --stroke:rgba(255,255,255,0.10);
+      --brand:#2f67b7;
+      --brand-hover:#25569a;
+      --shadow:0 20px 50px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 50% 18%, rgba(47,103,183,.14), transparent 55%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:22px 30px;
+    }
+    .topbar img{
+      height:44px;
+      width:auto;
+      display:block;
+    }
+    .help{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      border:1px solid var(--stroke);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--text);
+      background:rgba(255,255,255,0.03);
+      font-weight:700;
+      font-size:18px;
+    }
+    .main{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .center{
+      width:min(760px, 92vw);
+      text-align:center;
+      margin-top:-40px;
+    }
+    .logo-teison{
+      width:min(360px, 65vw);
+      max-width:100%;
+      height:auto;
+      display:block;
+      margin:0 auto 28px;
+      filter: drop-shadow(0 12px 26px rgba(0,0,0,.25));
+    }
+    .search-wrap{
+      width:min(560px, 100%);
+      margin:0 auto;
+    }
+    .search{
+      width:100%;
+      height:58px;
+      border-radius:999px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,0.96);
+      color:#1b2c49;
+      font-size:18px;
+      padding:0 24px;
+      outline:none;
+      box-shadow:var(--shadow);
+    }
+    .search::placeholder{color:#7383a0}
+    .btn{
+      margin-top:16px;
+      width:min(380px, 100%);
+      height:54px;
+      border:none;
+      border-radius:999px;
+      background:var(--brand);
+      color:white;
+      font-size:16px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:0 14px 30px rgba(20,53,102,.35);
+      transition:.2s ease;
+    }
+    .btn:hover{background:var(--brand-hover); transform:translateY(-1px)}
+    .subtitle{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:16px;
+    }
+    .hint{
+      margin-top:28px;
+      font-size:13px;
+      color:rgba(255,255,255,.68);
+    }
+    .footer{
+      border-top:1px solid rgba(255,255,255,0.08);
+      text-align:center;
+      padding:16px 20px;
+      color:rgba(255,255,255,.72);
+      font-size:14px;
+    }
+    @media (max-width:680px){
+      .topbar{padding:18px 18px}
+      .topbar img{height:34px}
+      .help{width:38px;height:38px}
+      .center{margin-top:-10px}
+      .search{height:54px;font-size:16px}
+      .btn{height:52px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <img src="ar70.png" alt="AR70">
+    <div class="help">?</div>
+  </header>
+
+  <main class="main">
+    <section class="center">
+      <img class="logo-teison" src="teison.png" alt="Teison">
+      <div class="search-wrap">
+        <input id="cidade" class="search" type="text" placeholder="Buscar cidade..." />
+        <button class="btn" onclick="buscarCidade()">Gerar Levantamento</button>
+        <div class="subtitle">O processo de vendas em um só lugar</div>
+        <div class="hint">Exemplo inicial: Joinville</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Desenvolvido por Carlos Alcântara
+  </footer>
+
+  <script>
+    function normalizar(texto){
+      return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+    }
+
+    function buscarCidade(){
+      const cidade = normalizar(document.getElementById("cidade").value);
+
+      if(cidade === "joinville"){
+        window.open("joinville.html", "_blank");
+      } else {
+        alert("Cidade ainda não cadastrada.");
+      }
+    }
+
+    document.getElementById("cidade").addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ buscarCidade(); }
+    });
+  </script>
+</body>
+</html>
