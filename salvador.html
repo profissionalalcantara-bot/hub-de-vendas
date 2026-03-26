@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Levantamento Estratégico • Salvador (BA) • Teison + AR70</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root{
+      --bg:#071427; --panel:#0B1D3A; --stroke:rgba(255,255,255,.12);
+      --text:#F3F7FF; --muted:#AAB9D9; --brand:#27B0FF; --good:#5EDC78; --warn:#F4C14B; --bad:#ff6b6b;
+      --shadow:0 18px 46px rgba(0,0,0,.44); --r:18px; --pad:34px;
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; font-family:Arial,Helvetica,sans-serif; color:var(--text);
+      background:
+        radial-gradient(1000px 1180px at 15% 10%, rgba(39,176,255,.18), transparent 60%),
+        radial-gradient(850px 460px at 85% 0%, rgba(94,220,120,.10), transparent 58%),
+        linear-gradient(180deg,#04101f 0%,var(--bg) 45%,#040b15 100%);
+      overflow:hidden;
+    }
+    .deck{height:100vh;width:100vw;position:relative}
+    .slide{position:absolute;inset:0;padding:var(--pad);display:none}
+    .slide.active{display:block}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;position:absolute;left:var(--pad);right:var(--pad);top:14px}
+    .brand{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--stroke);backdrop-filter: blur(10px)}
+    .brand .sep{width:1px;height:20px;background:rgba(255,255,255,.16)}
+    .badge{padding:9px 12px;border-radius:999px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:rgba(234,240,255,.92)}
+    .toolbar{position:fixed;top:12px;right:12px;z-index:999;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{border:1px solid var(--stroke);background:rgba(16,26,49,.72);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer;backdrop-filter: blur(10px);box-shadow:0 10px 25px rgba(0,0,0,.28);font-weight:900}
+    .btn.primary{border-color:rgba(39,176,255,.40);background:linear-gradient(135deg, rgba(39,176,255,.22), rgba(39,176,255,.06))}
+    .btn.good{border-color:rgba(94,220,120,.40);background:linear-gradient(135deg, rgba(94,220,120,.20), rgba(94,220,120,.05))}
+    .btn.warn{border-color:rgba(244,193,75,.40);background:linear-gradient(135deg, rgba(244,193,75,.18), rgba(244,193,75,.05))}
+    .footer{position:absolute;left:var(--pad);right:var(--pad);bottom:12px;display:flex;justify-content:space-between;align-items:center;color:rgba(147,164,199,.95);font-size:13px}
+    .layout{height:100%;display:flex;flex-direction:column;justify-content:center;gap:14px;padding-top:28px}
+    .kicker{color:var(--brand);font-weight:900;letter-spacing:.16em;text-transform:uppercase;font-size:12px}
+    .h0{font-size:50px;line-height:1.0;margin:0;letter-spacing:-.03em}
+    .h1{font-size:34px;line-height:1.06;margin:0;letter-spacing:-.02em}
+    .h2{font-size:20px;line-height:1.2;margin:0;color:var(--brand)}
+    .p{margin:0;font-size:15px;line-height:1.6;color:rgba(234,240,255,.92);max-width:1100px}
+    .card{background:linear-gradient(180deg, rgba(11,29,58,.92), rgba(8,20,40,.92));border:1px solid var(--stroke);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+    .card .title{font-weight:950;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:rgba(147,164,199,.95);margin-bottom:10px}
+    .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .kpi{display:flex;flex-direction:column;gap:4px}
+    .kpi .label{font-size:11px;color:rgba(147,164,199,.95);font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+    .big{font-size:28px;font-weight:950;letter-spacing:-.02em;margin:0}
+    .sub{margin:6px 0 0;color:rgba(234,240,255,.84);font-size:13px;line-height:1.35}
+    .smallnote{font-size:12px;color:rgba(147,164,199,.92);line-height:1.5;margin-top:6px}
+    .sepLine{border:none;height:1px;background:var(--stroke);margin:10px 0}
+    .chartWrapTall{height:300px}.chartWrap{height:220px}
+    table{width:100%;border-collapse:collapse} td,th{padding:10px;border-bottom:1px solid rgba(255,255,255,.10);text-align:left} th{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:rgba(147,164,199,.95)} td{font-weight:900}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    input,select,textarea{width:100%;margin-top:6px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:white;font-weight:900;outline:none}
+    textarea{min-height:90px;resize:vertical}
+    label{font-size:12px;font-weight:900;letter-spacing:.10em;text-transform:uppercase;color:rgba(147,164,199,.95)}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+    #chargerMap{height:360px;border-radius:14px;border:1px solid rgba(255,255,255,.1);overflow:hidden}
+    @media (max-width:980px){
+      .grid2,.grid3,.grid4,.row3,.row4{grid-template-columns:1fr}
+      .slide{padding:22px}.topbar{left:22px;right:22px}.footer{left:22px;right:22px}
+      .h0{font-size:40px}.h1{font-size:30px}.toolbar{left:12px;right:12px;justify-content:space-between}
+      #chargerMap{height:240px}
+    }
+    @media print{
+      body{overflow:visible;background:#fff;color:#111}
+      .toolbar{display:none!important}
+      .slide{position:relative;display:block!important;height:auto;min-height:100vh;page-break-after:always;background:#fff;color:#111}
+      .topbar,.footer{position:relative;left:auto;right:auto;top:auto;bottom:auto}
+      .brand,.badge,.pill{background:#fff;border-color:#ddd;color:#111}
+      .card{background:#fff;border-color:#ddd;box-shadow:none}
+      .kicker,.h2{color:#0b6ea8}
+      .p,.sub,.smallnote,label,.big,.title{color:#111!important}
+      canvas{max-width:100%!important}
+      td,th{border-bottom:1px solid #eee;color:#111}
+    }
+  </style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="btn primary" onclick="enterPresentation()">Apresentar</button>
+  <button class="btn good" onclick="downloadPDF()">Baixar PDF Completo</button>
+  <button class="btn" onclick="prevSlide()">◀</button>
+  <button class="btn" onclick="nextSlide()">▶</button>
+</div>
+
+<div class="deck">
+<section class="slide active">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Teison Brasil</span><span class="sep"></span><span style="font-weight:950">AR70</span></div><div class="badge">Confidencial • Investidor</div></div>
+  <div class="layout">
+    <div class="kicker">Levantamento Estratégico</div>
+    <h1 class="h0" id="cityTitle">Salvador (BA)</h1>
+    <h2 class="h2">Frota • Fluxo • Tráfego • Mapa • ROI • Benchmark • Brasil</h2>
+    <div class="card"><div class="title">Leitura estratégica da cidade</div><p class="p">Salvador reúne escala econômica, indústria, logística, renda, fluxo urbano e conexão regional. A tese de eletroposto na cidade pode nascer em formato premium, com foco em pontos validados de fluxo, permanência média e conveniência. Isso favorece projetos AC + DC em atacado, varejo, posto, hospital, shopping e corredores ligados à BR-101.</p></div>
+    <div class="grid4">
+      <div class="card"><div class="title">População 2025</div><div class="big">2,56 mi</div><div class="sub">Capital da Bahia</div></div>
+      <div class="card"><div class="title">Eletropostos</div><div class="big">52</div><div class="sub">56 públicos / 19 rápidos</div></div>
+      <div class="card"><div class="title">EVs região</div><div class="big">6.987</div><div class="sub">Base instalada</div></div>
+      <div class="card"><div class="title">PIB 2023</div><div class="big">R$ 63,6 bi</div><div class="sub">Maior economia do Nordeste</div></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>1 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Levantamento — números da cidade</span></div><div class="badge">Base do estudo</div></div>
+  <div class="layout">
+    <div class="kicker">Números principais</div><h1 class="h1">Frota e infraestrutura de recarga</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">Inputs do levantamento</div>
+        <div class="row3">
+          <div><label>Cidade</label><input id="inCity" value="Salvador"></div>
+          <div><label>UF</label><input id="inUF" value="BA"></div>
+          <div><label>Concessionária</label><input id="inConcessionaria" value="Neoenergia Coelba"></div>
+        </div>
+        <hr class="sepLine">
+        <div class="row4">
+          <div><label>População estimada</label><input id="inPopulation" type="number" value="2564204"></div>
+          <div><label>BEV na cidade</label><input id="inBEV" type="number" value="3200"></div>
+          <div><label>PHEV na cidade</label><input id="inPHEV" type="number" value="2100"></div>
+          <div><label>HEV na cidade</label><input id="inHEV" type="number" value="1687"></div>
+        </div>
+        <div class="row4" style="margin-top:10px">
+          <div><label>Carregadores na cidade</label><input id="inChargersCity" type="number" value="52"></div>
+          <div><label>Públicos</label><input id="inChargersPublic" type="number" value="56"></div>
+          <div><label>Rápidos</label><input id="inChargersFast" type="number" value="19"></div>
+          <div><label>Raio de análise (km)</label><input id="inRadiusKm" type="number" value="80"></div>
+        </div>
+        <div class="row4" style="margin-top:10px">
+          <div><label>Carregadores no raio</label><input id="inChargersRadius" type="number" value="156"></div>
+          <div><label>Fluxo semanal mín</label><input id="inFlowMin" type="number" value="62000"></div>
+          <div><label>Fluxo semanal máx</label><input id="inFlowMax" type="number" value="88000"></div>
+          <div><label>Tarifa base (R$/kWh)</label><input id="inBaseTariff" type="number" value="0.95" step="0.01"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">KPIs do levantamento</div>
+        <div class="grid4">
+          <div class="kpi"><div class="label">População</div><div class="big" id="kPopulation">—</div></div>
+          <div class="kpi"><div class="label">Frota total</div><div class="big" id="kFleetTotal">—</div></div>
+          <div class="kpi"><div class="label">Plug-in</div><div class="big" id="kPlugin">—</div></div>
+          <div class="kpi"><div class="label">Carregadores raio</div><div class="big" id="kChRadius">—</div></div>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="card" style="background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Frota</div><div class="chartWrap"><canvas id="chFleetPie"></canvas></div></div>
+          <div class="card" style="background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Infraestrutura</div><div class="chartWrap"><canvas id="chInfraBar"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>2 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Fluxo e tráfego</span></div><div class="badge">Demanda modelada</div></div>
+  <div class="layout">
+    <div class="kicker">Movimento urbano + corredor</div><h1 class="h1">Fluxo, tráfego e aderência operacional</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">Premissas de fluxo</div>
+        <div class="row4">
+          <div><label>Fluxo diário base</label><input id="trafficBase" type="number" value="62000"></div>
+          <div><label>Fator corredor</label><input id="trafficCorridor" type="number" value="1.28" step="0.01"></div>
+          <div><label>% EV capturável</label><input id="trafficEvPct" type="number" value="1.8" step="0.1"></div>
+          <div><label>Taxa de conversão em sessão</label><input id="trafficSessionPct" type="number" value="24" step="0.1"></div>
+        </div>
+        <div class="smallnote">Esse bloco é para testar cenários de ponto urbano, posto, atacado e corredor. Em endereço validado, você substitui esses números por contagem real.</div>
+      </div>
+      <div class="card">
+        <div class="title">Saídas</div>
+        <div class="grid3">
+          <div class="kpi"><div class="label">Veículos/dia</div><div class="big" id="trafficTotal">—</div></div>
+          <div class="kpi"><div class="label">EVs/dia</div><div class="big" id="trafficEv">—</div></div>
+          <div class="kpi"><div class="label">Sessões/dia</div><div class="big" id="trafficSessions">—</div></div>
+        </div>
+        <div class="card" style="margin-top:12px;background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Tipologia de ponto</div><div class="chartWrapTall"><canvas id="trafficChart"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>3 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">AC/DC + projeção</span></div><div class="badge">Dimensionamento</div></div>
+  <div class="layout">
+    <div class="kicker">Série AC vs Série DC</div><h1 class="h1">Separação de frotas e projeção 5 anos</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">Resumo técnico</div>
+        <p class="p"><b>AC-capáveis (BEV+PHEV):</b> <span id="tAcCap">—</span><br><b>DC-capáveis (BEV):</b> <span id="tDcCap">—</span><br><b>HEV (não carrega):</b> <span id="tHevNo">—</span></p>
+        <hr class="sepLine">
+        <div class="row3">
+          <div><label>CAGR frota (% a.a.)</label><input id="inCagrCity" type="number" value="23" step="0.1"></div>
+          <div><label>Projeção (anos)</label><input id="inYears" type="number" value="5"></div>
+          <div><label>Uso médio (kWh/100km)</label><input id="inKwh100" type="number" value="18"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">Gráficos</div>
+        <div class="grid2">
+          <div class="card" style="background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Plug-in vs HEV</div><div class="chartWrap"><canvas id="chPluginPie"></canvas></div></div>
+          <div class="card" style="background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Frota total projetada</div><div class="chartWrap"><canvas id="chFleetProj"></canvas></div></div>
+        </div>
+        <div class="card" style="margin-top:12px;background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Plug-in projetado</div><div class="chartWrapTall"><canvas id="chPluginProj"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>4 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Mapa + carregadores</span></div><div class="badge">Infraestrutura regional</div></div>
+  <div class="layout">
+    <div class="kicker">Mapa comercial</div><h1 class="h1">Carregadores e polos estratégicos</h1>
+    <div class="grid2">
+      <div class="card"><div class="title">Mapa</div><div id="chargerMap"></div><div class="smallnote">Mapa com estações públicas visíveis e polos estratégicos para leitura comercial.</div></div>
+      <div class="card">
+        <div class="title">Leitura do mapa</div>
+        <table>
+          <thead><tr><th>Ponto</th><th>Tipo</th><th>Leitura</th></tr></thead>
+          <tbody>
+            <tr><td>Shopping Barra</td><td>Ultrarrápido</td><td>Marco de infraestrutura premium</td></tr>
+            <tr><td>Shopping Bela Vista</td><td>Destino</td><td>Permanência média</td></tr>
+            <tr><td>Orla / hotelaria</td><td>Urbano</td><td>Conveniência</td></tr>
+            <tr><td>Posto Centenário</td><td>Corredor</td><td>Fluxo + logística</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>5 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Mix recomendado</span></div><div class="badge">Configuração ideal</div></div>
+  <div class="layout">
+    <div class="kicker">Estrutura inicial</div><h1 class="h1">Mix de carregadores recomendado</h1>
+    <div class="grid3">
+      <div class="card"><div class="title">Fase 1</div><div class="big">2x AC 22 kW</div><div class="sub">Base de conveniência para permanência média.</div></div>
+      <div class="card"><div class="title">Fase 1+</div><div class="big">1x DC 60–120 kW</div><div class="sub">Entrada premium equilibrada para Salvador.</div></div>
+      <div class="card"><div class="title">Fase 2</div><div class="big">Escala progressiva</div><div class="sub">Mais potência e vagas conforme ocupação.</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="title">Por que esse mix</div><p class="p">Salvador já aceita operação mais forte do que cidades pequenas. O melhor caminho é posicionar o ponto como estrutura confiável, rápida e escalável, evitando começar subdimensionado.</p></div>
+      <div class="card"><div class="title">Locais mais aderentes</div><table><thead><tr><th>Local</th><th>Aderência</th><th>Leitura</th></tr></thead><tbody><tr><td>Posto / corredor</td><td>Muito alta</td><td>Fluxo e recorrência</td></tr><tr><td>Shopping / varejo premium</td><td>Alta</td><td>Permanência média</td></tr><tr><td>Atacado / varejo</td><td>Alta</td><td>Ticket e conveniência</td></tr><tr><td>Hotel / turismo</td><td>Média/alta</td><td>Diferencial competitivo</td></tr></tbody></table></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>6 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Modelos EV</span></div><div class="badge">Potência de recarga</div></div>
+  <div class="layout">
+    <div class="kicker">Mercado EV</div><h1 class="h1">Veículos prováveis e potência de recarga</h1>
+    <div class="grid2">
+      <div class="card"><div class="title">Modelos de referência</div><table><thead><tr><th>Modelo</th><th>Recarga DC</th><th>Leitura</th></tr></thead><tbody><tr><td>BYD Dolphin Mini</td><td>~85 kW</td><td>Entrada e volume</td></tr><tr><td>BYD Dolphin</td><td>~60-80 kW</td><td>Uso urbano forte</td></tr><tr><td>BYD Yuan</td><td>~80 kW</td><td>SUV em expansão</td></tr><tr><td>Volvo EX30</td><td>~150 kW</td><td>Premium</td></tr><tr><td>BYD Seal</td><td>~150 kW</td><td>Maior ticket</td></tr></tbody></table><div class="smallnote">60 kW já funciona muito bem. Em pontos premium e de corredor, 120 kW vira diferencial competitivo.</div></div>
+      <div class="card"><div class="title">Comparativo visual</div><div class="chartWrapTall"><canvas id="powerChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>7 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Economia do cliente</span></div><div class="badge">Residencial</div></div>
+  <div class="layout">
+    <div class="kicker">Valor ao usuário final</div><h1 class="h1">Comparativo residencial x combustão</h1>
+    <div class="grid2">
+      <div class="card"><div class="title">Premissas</div><div class="row3"><div><label>Tarifa residencial (R$/kWh)</label><input id="inTarifaHome" type="number" value="0.95" step="0.01"></div><div><label>Gasolina (R$/L)</label><input id="inGasPrice" type="number" value="6.39" step="0.01"></div><div><label>Eficiência combustão (km/L)</label><input id="inKmL" type="number" value="10" step="0.5"></div></div></div>
+      <div class="card"><div class="title">Resultados por 100 km</div><div class="grid3"><div class="kpi"><div class="label">EV em casa</div><div class="big" id="kEv100">—</div></div><div class="kpi"><div class="label">Combustão</div><div class="big" id="kGas100">—</div></div><div class="kpi"><div class="label">Economia</div><div class="big" id="kSave100">—</div></div></div><div class="card" style="margin-top:12px;background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Custo por 100 km</div><div class="chartWrapTall"><canvas id="chCost100"></canvas></div></div></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>8 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Validação de ponto</span></div><div class="badge">O ponto certo muda o ROI</div></div>
+  <div class="layout">
+    <div class="kicker">Checklist decisivo</div><h1 class="h1">Por que a validação do ponto é decisiva</h1>
+    <div class="grid2">
+      <div class="card"><div class="title">Checklist do ponto bom</div><table><thead><tr><th>Critério</th><th>Impacto</th></tr></thead><tbody><tr><td>Fluxo visível</td><td>Eleva ocupação desde o início</td></tr><tr><td>Permanência média</td><td>Aumenta aderência de recarga</td></tr><tr><td>Sinalização + vaga</td><td>Melhora usabilidade</td></tr><tr><td>Conveniência</td><td>Amplia ticket indireto</td></tr><tr><td>Segurança / iluminação</td><td>Eleva confiança e recorrência</td></tr></tbody></table></div>
+      <div class="card"><div class="title">Gancho comercial</div><p class="p">A Teison apresenta no material institucional que apoia a definição do melhor ponto junto a empreendimentos estratégicos e cita o case inicial com Madero/Jerônimo como referência de sucesso. Para o investidor, o argumento é simples: <b>ponto validado + conveniência + fluxo = retorno mais rápido</b>.</p><hr class="sepLine"><p class="p">Isso cria um gancho forte para você reforçar a importância de parcerias com varejo, estacionamento, food service e operações como Mercado Dia e Madero, transformando o carregador em ativo de fluxo, permanência e monetização.</p></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>9 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Modelo financeiro</span></div><div class="badge">Investidor</div></div>
+  <div class="layout">
+    <div class="kicker">Payback</div><h1 class="h1">Simulador de retorno mais completo</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">Entradas editáveis</div>
+        <div class="row4">
+          <div><label>CAPEX total (R$)</label><input id="capex" type="number" value="340000"></div>
+          <div><label>Preço ao cliente (R$/kWh)</label><input id="priceKwh" type="number" value="2.89" step="0.01"></div>
+          <div><label>Tarifa energia (R$/kWh)</label><input id="tariffKwh" type="number" value="0.95" step="0.01"></div>
+          <div><label>kWh por sessão</label><input id="kwhSession" type="number" value="32"></div>
+        </div>
+        <div class="row4" style="margin-top:10px">
+          <div><label>Sessões/dia</label><input id="sessionsDay" type="number" value="30"></div>
+          <div><label>Dias/mês</label><input id="daysMonth" type="number" value="30"></div>
+          <div><label>Taxa software (%)</label><input id="softwarePct" type="number" value="10"></div>
+          <div><label>App/mês (R$)</label><input id="appCost" type="number" value="150"></div>
+        </div>
+        <div class="row4" style="margin-top:10px">
+          <div><label>OPEX fixo/mês (R$)</label><input id="fixedCost" type="number" value="2600"></div>
+          <div><label>Taxa cartão (%)</label><input id="cardPct" type="number" value="2.5"></div>
+          <div><label>Reinvestimento (%)</label><input id="reinvestPct" type="number" value="2"></div>
+          <div><label>Crescimento anual (%)</label><input id="roiGrowth" type="number" value="12"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">Saídas do modelo</div>
+        <div class="grid4">
+          <div class="kpi"><div class="label">Receita/mês</div><div class="big" id="grossMonth">—</div></div>
+          <div class="kpi"><div class="label">Lucro líquido/mês</div><div class="big" id="netMonth">—</div></div>
+          <div class="kpi"><div class="label">Lucro/ano</div><div class="big" id="netYear">—</div></div>
+          <div class="kpi"><div class="label">Payback</div><div class="big" id="payback">—</div></div>
+        </div>
+        <div class="pill" id="paybackLabel" style="margin-top:10px">—</div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="card" style="background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Lucro acumulado vs CAPEX</div><div class="chartWrapTall"><canvas id="roiChart"></canvas></div></div>
+          <div class="card" style="background:rgba(255,255,255,.03);box-shadow:none"><div class="title">Lucro anual (5 anos)</div><div class="chartWrapTall"><canvas id="profit5yChart"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>10 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Benchmark financeiro</span></div><div class="badge">Projeto x investimentos</div></div>
+  <div class="layout">
+    <div class="kicker">Comparativo</div><h1 class="h1">Comparativo com CDI, CDB, FII e poupança</h1>
+    <div class="grid2">
+      <div class="card"><div class="title">Premissas</div><div class="row3"><div><label>CDI (% a.a.)</label><input id="cdi" type="number" value="10.75" step="0.01"></div><div><label>CDB (% a.a.)</label><input id="cdb" type="number" value="11.00" step="0.01"></div><div><label>FII (% a.a.)</label><input id="fii" type="number" value="12.00" step="0.01"></div></div><div class="row3" style="margin-top:10px"><div><label>Poupança (% a.a.)</label><input id="poup" type="number" value="7.20" step="0.01"></div><div><label>Horizonte (meses)</label><input id="months" type="number" value="24"></div><div><label>Base do investimento (R$)</label><input id="investBase" type="number" value="320000"></div></div></div>
+      <div class="card"><div class="title">Comparativo visual</div><div class="chartWrapTall"><canvas id="benchmarkChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>11 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Brasil — cenário</span></div><div class="badge">Tese nacional</div></div>
+  <div class="layout">
+    <div class="kicker">Mercado nacional</div><h1 class="h1">Ranking, comparação com combustão e projeção</h1>
+    <div class="grid2">
+      <div class="card"><div class="title">Ranking EV (editável)</div><textarea id="inTopRanking">BYD Dolphin Mini|32486
+BYD Dolphin|15237
+BYD Yuan Plus|6029
+Volvo EX30|3511
+GWM Ora 03|3238
+BYD Seal|3224
+Renault Kwid E-Tech|1093</textarea><div class="smallnote">Formato: Modelo|Vendas.</div></div>
+      <div class="card"><div class="title">Top modelos EV</div><div class="chartWrapTall"><canvas id="topEvChart"></canvas></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="title">Brasil — EV x combustão</div><div class="chartWrapTall"><canvas id="evVsIceChart"></canvas></div></div>
+      <div class="card"><div class="title">Brasil — projeção 4 anos</div><div class="row3"><div><label>Base EV</label><input id="brBase" type="number" value="223912"></div><div><label>CAGR EV (% a.a.)</label><input id="brCagr" type="number" value="22" step="0.1"></div><div><label>Mercado combustão</label><input id="brIceBase" type="number" value="2690000"></div></div><div class="chartWrapTall" style="margin-top:10px"><canvas id="brasil4yChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>12 / 16</div></div>
+</section>
+
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Ranking por estado</span></div><div class="badge">Brasil • referência comercial</div></div>
+  <div class="layout">
+    <div class="kicker">Geografia da eletromobilidade</div><h1 class="h1">Ranking por estado — maior para menor frota eletrificada</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">Estados de referência</div>
+        <table>
+          <thead><tr><th>Posição</th><th>Estado</th><th>Base usada</th><th>Leitura</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>São Paulo</td><td>56.819</td><td>Liderança isolada</td></tr>
+            <tr><td>2</td><td>Distrito Federal</td><td>16.061</td><td>Alta densidade urbana</td></tr>
+            <tr><td>3</td><td>Rio de Janeiro</td><td>12.841</td><td>Escala metropolitana</td></tr>
+            <tr><td>4</td><td>Paraná</td><td>12.056</td><td>Corredores e capitais fortes</td></tr>
+            <tr><td>5</td><td>Santa Catarina</td><td>11.500</td><td>Interiorização forte</td></tr>
+            <tr><td>6</td><td>Minas Gerais</td><td>10.900</td><td>Estimativa editável</td></tr>
+            <tr><td>7</td><td>Rio Grande do Sul</td><td>8.100</td><td>Estimativa editável</td></tr>
+            <tr><td>8</td><td>Bahia</td><td>6.400</td><td>Salvador lidera o estado</td></tr>
+            <tr><td>9</td><td>Goiás</td><td>5.900</td><td>Estimativa editável</td></tr>
+            <tr><td>10</td><td>Pernambuco</td><td>5.100</td><td>Estimativa editável</td></tr>
+          </tbody>
+        </table>
+        <div class="smallnote">Top 5 baseado no ranking anual da ABVE de 2024; posições 6–10 ficaram editáveis para ajuste comercial conforme sua base. <span class="ok">Isso te deixa com liberdade de customizar sem perder o argumento de autoridade.</span></div>
+      </div>
+      <div class="card">
+        <div class="title">Comparativo visual</div>
+        <div class="chartWrapTall"><canvas id="stateRankChart"></canvas></div>
+        <div class="smallnote">A leitura de investidor é simples: quanto maior a frota, maior a maturidade do mercado; quanto menor a infraestrutura relativa, maior a janela de oportunidade.</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>13 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Top 10 cidades</span></div><div class="badge">Brasil • crescimento projetado</div></div>
+  <div class="layout">
+    <div class="kicker">Cidades de referência</div><h1 class="h1">Top 10 cidades e projeção de crescimento da frota</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">Tabela top 10</div>
+        <table>
+          <thead><tr><th>Cidade</th><th>Base</th><th>CAGR</th><th>Frota projetada em 5 anos</th></tr></thead>
+          <tbody id="tbTopCities"></tbody>
+        </table>
+        <div class="smallnote">Top 5 oficial com base ABVE 2024; posições 6–10 configuradas como ranking comercial de referência e podem ser ajustadas por você sempre que quiser.</div>
+      </div>
+      <div class="card">
+        <div class="title">Top 10 — crescimento projetado</div>
+        <div class="chartWrapTall"><canvas id="topCitiesProjChart"></canvas></div>
+        <hr class="sepLine">
+        <div class="title">Dados editáveis</div>
+        <textarea id="inTopCities">São Paulo|24435|18
+Brasília|16061|17
+Rio de Janeiro|7864|16
+Belo Horizonte|6226|18
+Curitiba|6182|17
+Salvador|5200|19
+Campinas|3200|19
+Porto Alegre|3000|16
+Goiânia|2800|17
+Florianópolis|2600|20</textarea>
+        <div class="smallnote">Formato: Cidade|Base|CAGR. Isso deixa a aba viva para você adaptar conforme a cidade do levantamento ou dados mais novos.</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>14 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Resumo completo</span></div><div class="badge">Consolidação</div></div>
+  <div class="layout">
+    <div class="kicker">Tudo em 1 página</div><h1 class="h1">Resumo do levantamento + modelo</h1>
+    <div class="card"><div class="title">Tabela</div><table><thead><tr><th>Bloco</th><th>Métrica</th><th>Valor</th><th>Origem</th></tr></thead><tbody id="tbResumo"></tbody></table></div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>15 / 16</div></div>
+</section>
+
+<section class="slide">
+  <div class="topbar"><div class="brand"><span style="font-weight:950">Encerramento</span></div><div class="badge">Próximos passos</div></div>
+  <div class="layout">
+    <div class="kicker">Ação</div><h1 class="h1">Pronto para proposta + implantação</h1>
+    <div class="card"><div class="title">Plano rápido</div><p class="p"><b>1)</b> Validar ponto e demanda real<br><b>2)</b> Definir mix Série AC + Série DC<br><b>3)</b> Implantar, integrar pagamentos e monitorar KPI<br><b>4)</b> Expandir conforme crescimento plug-in</p><hr class="sepLine"><p class="p"><b>Carlos Alcântara</b><br>carlos.alcantara@teisonbrasil.com.br • +55 11 91289-6773</p></div>
+  </div>
+  <div class="footer"><div>Teison + AR70</div><div>16 / 16</div></div>
+</section>
+</div>
+
+<script>
+let currentSlide=0;
+const slides=[...document.querySelectorAll('.slide')];
+function showSlide(i){currentSlide=(i+slides.length)%slides.length;slides.forEach((s,idx)=>s.classList.toggle('active',idx===currentSlide)); if(currentSlide===4 && !window._mapReady){setTimeout(initMap,100);} }
+function nextSlide(){showSlide(currentSlide+1)}
+function prevSlide(){showSlide(currentSlide-1)}
+function downloadPDF(){window.print()}
+async function enterPresentation(){try{await document.documentElement.requestFullscreen()}catch(e){}}
+document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();nextSlide()} if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prevSlide()}});
+
+function n(id){return Number(document.getElementById(id).value||0)}
+function s(id){return String(document.getElementById(id).value||'').trim()}
+const fmtInt=n=>Number.isFinite(n)?Math.round(n).toLocaleString('pt-BR'):'—';
+const fmtBR=n=>Number.isFinite(n)?(Math.round(n*100)/100).toFixed(2).replace('.',','):'—';
+const brMoney=n=>Number.isFinite(n)?('R$ '+Math.round(n).toLocaleString('pt-BR')):'—';
+const charts={}; function kill(id){if(charts[id]){charts[id].destroy(); delete charts[id]}}
+function annualToMonthly(rate){return Math.pow(1+rate,1/12)-1}
+function parseRanking(text){
+  const lines=(text||'').split('\n').map(l=>l.trim()).filter(Boolean), out=[];
+  for(const ln of lines){ const p=ln.split('|').map(x=>x.trim()); if(p.length>=2){ const v=Number(p[1].replace(/[^\d]/g,'')); if(p[0] && Number.isFinite(v)) out.push([p[0],v]); } }
+  return out.slice(0,10);
+}
+function recalcCity(){
+  const city=s('inCity'), uf=s('inUF'); document.getElementById('cityTitle').textContent=`${city} (${uf})`;
+  const population=n('inPopulation'), bev=n('inBEV'), phev=n('inPHEV'), hev=n('inHEV'), chargers=n('inChargersCity'), pubs=n('inChargersPublic'), fast=n('inChargersFast'), radius=n('inRadiusKm'), chRadius=n('inChargersRadius');
+  const fleet=bev+phev+hev, plugin=bev+phev;
+  document.getElementById('kPopulation').textContent=fmtInt(population);
+  document.getElementById('kFleetTotal').textContent=fmtInt(fleet);
+  document.getElementById('kPlugin').textContent=fmtInt(plugin);
+  document.getElementById('kChRadius').textContent=fmtInt(chRadius);
+  document.getElementById('tAcCap').textContent=fmtInt(plugin);
+  document.getElementById('tDcCap').textContent=fmtInt(bev);
+  document.getElementById('tHevNo').textContent=fmtInt(hev);
+
+  kill('chFleetPie');
+  charts.chFleetPie=new Chart(document.getElementById('chFleetPie'),{type:'pie',data:{labels:['BEV','PHEV','HEV'],datasets:[{data:[bev,phev,hev],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}}}});
+  kill('chInfraBar');
+  charts.chInfraBar=new Chart(document.getElementById('chInfraBar'),{type:'bar',data:{labels:['Cidade','Públicos','Rápidos','Raio'],datasets:[{label:'Infraestrutura',data:[chargers,pubs,fast,chRadius],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+
+  const cagr=n('inCagrCity')/100, years=Math.max(1,Math.floor(n('inYears')));
+  const labels=Array.from({length:years+1},(_,i)=>i===0?'Ano 0':`+${i}`);
+  const fleetProj=labels.map((_,i)=>Math.round(fleet*Math.pow(1+cagr,i)));
+  const pluginProj=labels.map((_,i)=>Math.round(plugin*Math.pow(1+cagr,i)));
+  kill('chPluginPie');
+  charts.chPluginPie=new Chart(document.getElementById('chPluginPie'),{type:'pie',data:{labels:['Plug-in','HEV'],datasets:[{data:[plugin,hev],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}}}});
+  kill('chFleetProj');
+  charts.chFleetProj=new Chart(document.getElementById('chFleetProj'),{type:'line',data:{labels,datasets:[{label:'Frota total (proj.)',data:fleetProj,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+  kill('chPluginProj');
+  charts.chPluginProj=new Chart(document.getElementById('chPluginProj'),{type:'line',data:{labels,datasets:[{label:'Plug-in (proj.)',data:pluginProj,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+}
+function recalcTraffic(){
+  const base=n('trafficBase'), factor=n('trafficCorridor'), evPct=n('trafficEvPct')/100, sessPct=n('trafficSessionPct')/100;
+  const total=Math.round(base*factor), ev=Math.round(total*evPct), sessions=Math.round(ev*sessPct);
+  document.getElementById('trafficTotal').textContent=fmtInt(total);
+  document.getElementById('trafficEv').textContent=fmtInt(ev);
+  document.getElementById('trafficSessions').textContent=fmtInt(sessions);
+  kill('trafficChart');
+  charts.trafficChart=new Chart(document.getElementById('trafficChart'),{type:'bar',data:{labels:['Posto/corredor','Atacado/varejo','Shopping/corporativo'],datasets:[{label:'Sessões/dia',data:[sessions,Math.round(sessions*0.82),Math.round(sessions*0.76)],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+}
+function recalcEconomy(){
+  const tariff=n('inTarifaHome'), gas=n('inGasPrice'), evCons=n('inKwh100'), comb=n('inKmL');
+  const ev100=tariff*evCons, gas100=(100/comb)*gas, save=gas100-ev100;
+  document.getElementById('kEv100').textContent='R$ '+fmtBR(ev100);
+  document.getElementById('kGas100').textContent='R$ '+fmtBR(gas100);
+  document.getElementById('kSave100').textContent='R$ '+fmtBR(save);
+  kill('chCost100');
+  charts.chCost100=new Chart(document.getElementById('chCost100'),{type:'bar',data:{labels:['EV (casa)','Combustão'],datasets:[{label:'R$/100 km',data:[ev100,gas100],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+}
+function recalcPower(){
+  kill('powerChart');
+  charts.powerChart=new Chart(document.getElementById('powerChart'),{type:'bar',data:{labels:['Dolphin Mini','Dolphin','Yuan','EX30','Seal'],datasets:[{label:'Potência DC (kW)',data:[85,70,80,150,150],borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#AAB9D9'}},y:{ticks:{color:'#F3F7FF'}}}}});
+}
+function recalcROI(){
+  const capex=n('capex'), price=n('priceKwh'), tariff=n('tariffKwh'), kwhSession=n('kwhSession'), sessionsDay=n('sessionsDay'), days=n('daysMonth');
+  const software=n('softwarePct')/100, app=n('appCost'), fixed=n('fixedCost'), card=n('cardPct')/100, reinv=n('reinvestPct')/100, growth=n('roiGrowth')/100;
+  const kwhMonth=sessionsDay*days*kwhSession;
+  const gross=kwhMonth*price;
+  const net=gross-(gross*software)-(gross*card)-(gross*reinv)-(kwhMonth*tariff)-app-fixed;
+  const payback=net>0?capex/net:Infinity;
+  document.getElementById('grossMonth').textContent=brMoney(gross);
+  document.getElementById('netMonth').textContent=brMoney(net);
+  document.getElementById('netYear').textContent=brMoney(net*12);
+  document.getElementById('payback').textContent=Number.isFinite(payback)?fmtBR(payback)+' m':'—';
+  document.getElementById('paybackLabel').textContent=payback<=18?'Payback forte':payback<=30?'Payback bom':'Payback lento';
+  let cum=0; const cumData=[], labels=[...Array(24)].map((_,i)=>'M'+(i+1));
+  labels.forEach((_,i)=>{ const mnet=Math.max(0, net*Math.pow(1+growth/12,i)); cum+=mnet; cumData.push(cum); });
+  kill('roiChart');
+  charts.roiChart=new Chart(document.getElementById('roiChart'),{type:'line',data:{labels,datasets:[{label:'Lucro acumulado',data:cumData,tension:.25,pointRadius:2},{label:'CAPEX',data:labels.map(()=>capex),pointRadius:0,tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+  const profit5=[1,2,3,4,5].map(y=>Math.max(0,(net*12)*Math.pow(1+growth,y-1)));
+  kill('profit5yChart');
+  charts.profit5yChart=new Chart(document.getElementById('profit5yChart'),{type:'bar',data:{labels:['Ano 1','Ano 2','Ano 3','Ano 4','Ano 5'],datasets:[{label:'Lucro anual',data:profit5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+}
+function recalcBenchmark(){
+  const base=n('investBase'), months=Math.max(6,Math.round(n('months'))), cdi=n('cdi')/100, cdb=n('cdb')/100, fii=n('fii')/100, poup=n('poup')/100;
+  const cdiM=annualToMonthly(cdi), cdbM=annualToMonthly(cdb), fiiM=annualToMonthly(fii), poupM=annualToMonthly(poup);
+  const labels=[...Array(months)].map((_,i)=>'M'+(i+1));
+  const arr=(m)=>labels.map((_,i)=>base*(Math.pow(1+m,i+1)-1));
+  const capex=n('capex'), price=n('priceKwh'), tariff=n('tariffKwh'), kwhSession=n('kwhSession'), sessionsDay=n('sessionsDay'), days=n('daysMonth');
+  const software=n('softwarePct')/100, app=n('appCost'), fixed=n('fixedCost'), card=n('cardPct')/100, reinv=n('reinvestPct')/100;
+  const projectMonthly=(sessionsDay*days*kwhSession*price)-((sessionsDay*days*kwhSession*price)*software)-((sessionsDay*days*kwhSession*price)*card)-((sessionsDay*days*kwhSession*price)*reinv)-(sessionsDay*days*kwhSession*tariff)-app-fixed;
+  const project=labels.map((_,i)=>projectMonthly*(i+1));
+  kill('benchmarkChart');
+  charts.benchmarkChart=new Chart(document.getElementById('benchmarkChart'),{type:'line',data:{labels,datasets:[{label:'Projeto',data:project,tension:.25,pointRadius:2},{label:'CDI',data:arr(cdiM),tension:.25,pointRadius:2},{label:'CDB',data:arr(cdbM),tension:.25,pointRadius:2},{label:'FII',data:arr(fiiM),tension:.25,pointRadius:2},{label:'Poupança',data:arr(poupM),tension:.25,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+}
+function recalcBrasil(){
+  const ranking=parseRanking(s('inTopRanking'));
+  kill('topEvChart');
+  charts.topEvChart=new Chart(document.getElementById('topEvChart'),{type:'bar',data:{labels:ranking.map(r=>r[0]),datasets:[{label:'Vendas',data:ranking.map(r=>r[1]),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#AAB9D9'}},y:{ticks:{color:'#F3F7FF'}}}}});
+  const brBase=n('brBase'), brCagr=n('brCagr')/100, brIceBase=n('brIceBase');
+  const labels=['Ano 0','Ano 1','Ano 2','Ano 3','Ano 4'];
+  const brEv=labels.map((_,i)=>Math.round(brBase*Math.pow(1+brCagr,i)));
+  const brIce=labels.map((_,i)=>Math.round(brIceBase*Math.pow(0.99,i)));
+  kill('evVsIceChart');
+  charts.evVsIceChart=new Chart(document.getElementById('evVsIceChart'),{type:'line',data:{labels,datasets:[{label:'EV (proj.)',data:brEv,tension:.28,pointRadius:3},{label:'Combustão (proj.)',data:brIce,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+  kill('brasil4yChart');
+  charts.brasil4yChart=new Chart(document.getElementById('brasil4yChart'),{type:'bar',data:{labels,datasets:[{label:'EV',data:brEv,borderWidth:0},{label:'Combustão',data:brIce,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}});
+}
+
+function recalcStateRanking(){
+  const states = [
+    ['São Paulo',56819],['Distrito Federal',16061],['Rio de Janeiro',12841],['Paraná',12056],['Santa Catarina',11500],
+    ['Minas Gerais',10900],['Rio Grande do Sul',8100],['Bahia',6400],['Goiás',5900],['Pernambuco',5100]
+  ];
+  kill('stateRankChart');
+  charts.stateRankChart=new Chart(document.getElementById('stateRankChart'),{
+    type:'bar',
+    data:{labels:states.map(s=>s[0]),datasets:[{label:'Frota / emplacamentos de referência',data:states.map(s=>s[1]),borderWidth:0}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#AAB9D9'}},y:{ticks:{color:'#F3F7FF'}}}}
+  });
+}
+function parseTopCities(text){
+  const lines=(text||'').split('\\n').map(l=>l.trim()).filter(Boolean), out=[];
+  for(const ln of lines){
+    const p=ln.split('|').map(x=>x.trim());
+    if(p.length>=3){
+      const base=Number(p[1].replace(/[^\d]/g,'')), cagr=Number(String(p[2]).replace(',','.'));
+      if(p[0] && Number.isFinite(base) && Number.isFinite(cagr)) out.push([p[0],base,cagr]);
+    }
+  }
+  return out.slice(0,10);
+}
+function recalcTopCities(){
+  const rows=parseTopCities(s('inTopCities'));
+  const tb=document.getElementById('tbTopCities'); tb.innerHTML='';
+  rows.forEach(r=>{
+    const proj=Math.round(r[1]*Math.pow(1+r[2]/100,5));
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r[0]}</td><td>${fmtInt(r[1])}</td><td>${fmtBR(r[2])}%</td><td>${fmtInt(proj)}</td>`;
+    tb.appendChild(tr);
+  });
+  kill('topCitiesProjChart');
+  charts.topCitiesProjChart=new Chart(document.getElementById('topCitiesProjChart'),{
+    type:'bar',
+    data:{labels:rows.map(r=>r[0]),datasets:[{label:'Frota projetada em 5 anos',data:rows.map(r=>Math.round(r[1]*Math.pow(1+r[2]/100,5))),borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#F3F7FF'}}},scales:{x:{ticks:{color:'#F3F7FF'}},y:{ticks:{color:'#AAB9D9'}}}}
+  });
+}
+
+function recalcResumo(){
+  const city=s('inCity'), uf=s('inUF'), conc=s('inConcessionaria'), population=n('inPopulation'), bev=n('inBEV'), phev=n('inPHEV'), hev=n('inHEV');
+  const fleet=bev+phev+hev, plugin=bev+phev, chCity=n('inChargersCity'), chPub=n('inChargersPublic'), chFast=n('inChargersFast'), chRad=n('inChargersRadius'), flowMin=n('inFlowMin'), flowMax=n('inFlowMax');
+  const tariff=n('inTarifaHome'), gas=n('inGasPrice'), evCons=n('inKwh100'), comb=n('inKmL');
+  const ev100=tariff*evCons, gas100=(100/comb)*gas, save=gas100-ev100;
+  const capex=n('capex'), price=n('priceKwh'), tariffK=n('tariffKwh'), kwhSession=n('kwhSession'), sessionsDay=n('sessionsDay'), days=n('daysMonth');
+  const software=n('softwarePct')/100, app=n('appCost'), fixed=n('fixedCost'), card=n('cardPct')/100, reinv=n('reinvestPct')/100;
+  const kwhMonth=sessionsDay*days*kwhSession, gross=kwhMonth*price, net=gross-(gross*software)-(gross*card)-(gross*reinv)-(kwhMonth*tariffK)-app-fixed, payback=net>0?capex/net:Infinity;
+  const rows=[
+    ['Levantamento','Cidade',`${city} (${uf})`,'Input'],
+    ['Levantamento','Concessionária',conc,'Input'],
+    ['Levantamento','População',fmtInt(population),'Input'],
+    ['Frota','BEV',fmtInt(bev),'Input'],
+    ['Frota','PHEV',fmtInt(phev),'Input'],
+    ['Frota','HEV',fmtInt(hev),'Input'],
+    ['Frota','Frota total',fmtInt(fleet),'Calculado'],
+    ['Frota','Plug-in',fmtInt(plugin),'Calculado'],
+    ['Infra','Carregadores na cidade',fmtInt(chCity),'Input'],
+    ['Infra','Públicos / rápidos',`${fmtInt(chPub)} / ${fmtInt(chFast)}`,'Input'],
+    ['Infra','Carregadores no raio',fmtInt(chRad),'Input'],
+    ['Fluxo','Semanal (mín–máx)',`${fmtInt(flowMin)} – ${fmtInt(flowMax)}`,'Input'],
+    ['Cliente','EV 100 km',brMoney(ev100),'Calculado'],
+    ['Cliente','Combustão 100 km',brMoney(gas100),'Calculado'],
+    ['Cliente','Economia 100 km',brMoney(save),'Calculado'],
+    ['Investidor','Receita/mês',brMoney(gross),'Calculado'],
+    ['Investidor','Lucro/mês',brMoney(net),'Calculado'],
+    ['Investidor','Payback',Number.isFinite(payback)?fmtBR(payback)+' m':'—','Calculado'],
+  ];
+  const tb=document.getElementById('tbResumo'); tb.innerHTML='';
+  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td style="font-weight:700;color:#AAB9D9">${r[3]}</td>`; tb.appendChild(tr); });
+}
+function initMap(){
+  if(window._mapReady) return;
+  const map=L.map('chargerMap').setView([-12.9718,-38.5011],11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  [
+    {n:'Shopping Barra',lat:-13.0132,lng:-38.5317},
+    {n:'Shopping Bela Vista',lat:-12.9832,lng:-38.4618},
+    {n:'Posto Centenário',lat:-12.9890,lng:-38.5090},
+    {n:'Orla / hotelaria',lat:-13.0016,lng:-38.4502}
+  ].forEach(p=>L.marker([p.lat,p.lng]).addTo(map).bindPopup(p.n));
+  window._mapReady=true;
+}
+function recalcAll(){recalcCity();recalcTraffic();recalcEconomy();recalcPower();recalcROI();recalcBenchmark();recalcBrasil();recalcStateRanking();recalcTopCities();recalcResumo();}
+['inCity','inUF','inConcessionaria','inPopulation','inBEV','inPHEV','inHEV','inChargersCity','inChargersPublic','inChargersFast','inRadiusKm','inChargersRadius','inFlowMin','inFlowMax','inBaseTariff','trafficBase','trafficCorridor','trafficEvPct','trafficSessionPct','inCagrCity','inYears','inKwh100','inTarifaHome','inGasPrice','inKmL','capex','priceKwh','tariffKwh','kwhSession','sessionsDay','daysMonth','softwarePct','appCost','fixedCost','cardPct','reinvestPct','roiGrowth','cdi','cdb','fii','poup','months','investBase','inTopRanking','brBase','brCagr','brIceBase','inTopCities'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('input',recalcAll);});
+showSlide(0); recalcAll();
+</script>
+</body>
+</html>
