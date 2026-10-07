@@ -4,6 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Levantamento Estratégico • Joinville (SC) • Teison + AR70</title>
+  <script>
+    (function(){
+      var auth = sessionStorage.getItem('teison_auth') || localStorage.getItem('teison_auth');
+      if (auth !== 'true') {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -83,6 +91,7 @@
 </head>
 <body>
 <div class="toolbar">
+  <button class="btn" onclick="window.location.href='index.html'" title="Voltar ao Hub de Vendas">← Hub</button>
   <button class="btn primary" onclick="enterPresentation()">Apresentar</button>
   <button class="btn good" onclick="downloadPDF()">Baixar PDF Completo</button>
   <button class="btn" onclick="prevSlide()">◀</button>
